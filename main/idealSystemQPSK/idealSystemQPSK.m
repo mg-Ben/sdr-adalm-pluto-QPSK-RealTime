@@ -9,6 +9,7 @@
 %   - input data. txStream.mat
 %   - msg2text. ascii code to text 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+addpath(genpath("functions"));
 clear; clf; clc;
 
 %% Parameters
@@ -32,7 +33,7 @@ SNR=30;               %dB
 
 %% Baseband Tx - mapping + shaping filter
 % frame
-load txStream.mat           % Loading the bits
+load("others/resources/txStream.mat")           % Loading the bits
 txStream = [synchroHeader'; disambiguationHeader'; txStream; zeros(100,1)]; %zeros are added                                                    %compensate the                                                      %filters
 
 % QPSK mapping
