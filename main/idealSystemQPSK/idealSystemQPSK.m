@@ -21,7 +21,7 @@ synchroHeader=repmat([1 1 0 0 1 0 0 1], 1, 65); %QPSK
 rng(0); disambiguationHeader = round(rand(1,50));  % Remove the synchronization phase ambiguity
 
 % Symbols
-M = 15;              % Samples per symbol=Oversamplig factor
+M = 9;              % Samples per symbol=Oversamplig factor
 
 % Modulation
 fs=10000; Ts =1/fs;            % Sampling frequency
@@ -69,10 +69,10 @@ Ps    = sum(s.^2)/length(s);    % Power of the  transmitted signal
 % generate noise signal
 sigma = sqrt(Ps/(10^(SNR/10))); % Calculate the sigma of the noise
 n = sqrt(1/2)*sigma*randn(size(s)) + 1i*sqrt(1/2)*sigma*randn(size(s));   
-r = s + n;                  % received noisy signal
+mmm                  % received noisy signal
 
 
-%% Demodulation - modulation + filering
+%% Demodulation - modulation + filtering
 c2  = exp( -1j*(2*pi*fc*k*Ts) );     % synchronized cosine for mixing
 r2  = r.*c2;                         % demod received signal
 r2I = real(r2);
