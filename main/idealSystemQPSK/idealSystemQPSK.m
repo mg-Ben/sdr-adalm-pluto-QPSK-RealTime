@@ -55,35 +55,8 @@ ps=hamming(M);                     % hamming pulse of width M
 msI=filter(ps,1,meI);              % convolve pulse shape with data
 msQ=filter(ps,1,meQ);
 
-
-
-%% Modulator
-k = 0:M*NSymbols-1;                         % sampling index = length(ms)
-c=exp( 1i*(2*pi*(fc+deltafc)*k*Ts+phi) );   % carrier at freq fc
-s=real( c.*(msI + 1j*msQ) );     % modulation
-
-
-%% Channel - adding noise
-Ps    = sum(s.^2)/length(s);    % Power of the  transmitted signal
-
-% generate noise signal
-sigma = sqrt(Ps/(10^(SNR/10))); % Calculate the sigma of the noise
-n = sqrt(1/2)*sigma*randn(size(s)) + 1i*sqrt(1/2)*sigma*randn(size(s));   
-r = s + n;                  % received noisy signal
-
-
-%% Demodulation - modulation + filering
-c2  = exp( -1j*(2*pi*fc*k*Ts) );     % synchronized cosine for mixing
-r2  = r.*c2;                         % demod received signal
-r2I = real(r2);
-r2Q = imag(r2);
-
-% LPF
-order=30;                              % Order of the filter
-fbe = [0 0.25 0.3 1]; damps=[1 1 0 0]; % LPF design
-b   = firpm(order,fbe,damps);          % impulse response of LPF
-xfI = filter(b,1,r2I);                 % LPF the demodulated signal
-xfQ = filter(b,1,r2Q);
+xfI = msI;
+xfQ = msQ;
 
 
 %% Receiver - Matching filtering + Timing Recovery + Phase recovery and slicer +
