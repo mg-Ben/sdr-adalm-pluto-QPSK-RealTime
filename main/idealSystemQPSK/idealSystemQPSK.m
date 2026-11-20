@@ -24,12 +24,19 @@ rng(0); disambiguationHeader = round(rand(1,50));  % Remove the synchronization 
 M = 9;              % Samples per symbol=Oversamplig factor
 
 % Modulation
-fs=10000; Ts =1/fs;            % Sampling frequency
-fc=2000;                       % Carrier frequency
+fs=10e5; Ts =1/fs;            % Sampling frequency
+fc=2.4e9;                       % Carrier frequency
 phi=pi/8; deltafc=10;           % Carrier phase & frequency error
+Tt=20;      % Transmission duration (s)
 
 % Channel
 SNR=30;               %dB
+
+%% ADALM-PLUTO initialization
+tx=sdrtx('Pluto');
+tx.CenterFrequency = fc;
+tx.Gain = -10;
+tx.BasebandSampleRate = fs;
 
 %% Baseband Tx - mapping + shaping filter
 % frame
@@ -55,51 +62,61 @@ ps=hamming(M);                     % hamming pulse of width M
 msI=filter(ps,1,meI);              % convolve pulse shape with data
 msQ=filter(ps,1,meQ);
 
-xfI = msI;
-xfQ = msQ;
+% Transmit signal over-the-air:
+x = msI' + 1j*msQ';
+if length(x) < 5000
+    x = [x; zeros(5000-length(x),1)];
+end
+transmitRepeat(tx,x);
+pause(Tt)
+release(tx);
 
-
-%% Receiver - Matching filtering + Timing Recovery + Phase recovery and slicer +
-%             + Phase Ambiguity Correction
-%matching filter
-xI=filter(ps,1,xfI); 
-xQ=filter(ps,1,xfQ); 
-
-% timing recovery
-dseta = 1; Bn=25;
-[ztI, ztQ] = timingRecoveryQPSK(xI, xQ, M,dseta,Bn);
-% ztI = xI(30:M:end);   %counting the delays
-% ztQ = xQ(30:M:end);
-
-% non-definitive code
-% zI  = zeros( size(ztI) ); zI(ztI>0) = 1;
-% zQ  = zeros( size(ztQ) ); zQ(ztQ>0) = 1;
-% rxStream=zeros( 1,2*length(zI) ); 
-% rxStream(1:2:end) = zI;
-% rxStream(2:2:end) = zQ;
-
-% Phase recovery and slicer
-[zI, zQ] = derotationQPSK(ztI, ztQ);
-
-% Phase ambiguity correction
-rxStream = disambiguationQPSK(zI, zQ, disambiguationHeader);
-
-
-%% Unframe and Message Visualization - frame synchronization + Presentation Layer
-disp('Frame Synchronization')
-rh = xcorr(2*rxStream-1, 2*frameHeader-1); Rrh = rh( (length(rh)+1)/2:end );
-[maxim, ind] = max(Rrh); headStart = ind(1); 
-if (maxim == 10) 
-  disp('  Sucessful Frame Header Detection');
-  
-  % Presentation layer
-  lengthMessagebin = num2str( rxStream(headStart+10:headStart+10+(24-1)) );
-  lengthMessage    = bin2dec(lengthMessagebin(:)');
-  %lengthMessage=44;
-  disp(['  Message length: ' num2str(lengthMessage)] );
-
-  rxMsg = rxStream(headStart+10+24:headStart+10+24+8*(lengthMessage)-1 );
-  disp(['  Message: ' msg2text(rxMsg') ]); %ascii to text
-else
-   disp('  ERROR: Frame Header NOT Detected');  
-end;
+%% Comment out the next part of code:
+% xfI = msI;
+% xfQ = msQ;
+% 
+% 
+% %% Receiver - Matching filtering + Timing Recovery + Phase recovery and slicer +
+% %             + Phase Ambiguity Correction
+% %matching filter
+% xI=filter(ps,1,xfI); 
+% xQ=filter(ps,1,xfQ); 
+% 
+% % timing recovery
+% dseta = 1; Bn=25;
+% [ztI, ztQ] = timingRecoveryQPSK(xI, xQ, M,dseta,Bn);
+% % ztI = xI(30:M:end);   %counting the delays
+% % ztQ = xQ(30:M:end);
+% 
+% % non-definitive code
+% % zI  = zeros( size(ztI) ); zI(ztI>0) = 1;
+% % zQ  = zeros( size(ztQ) ); zQ(ztQ>0) = 1;
+% % rxStream=zeros( 1,2*length(zI) ); 
+% % rxStream(1:2:end) = zI;
+% % rxStream(2:2:end) = zQ;
+% 
+% % Phase recovery and slicer
+% [zI, zQ] = derotationQPSK(ztI, ztQ);
+% 
+% % Phase ambiguity correction
+% rxStream = disambiguationQPSK(zI, zQ, disambiguationHeader);
+% 
+% 
+% %% Unframe and Message Visualization - frame synchronization + Presentation Layer
+% disp('Frame Synchronization')
+% rh = xcorr(2*rxStream-1, 2*frameHeader-1); Rrh = rh( (length(rh)+1)/2:end );
+% [maxim, ind] = max(Rrh); headStart = ind(1); 
+% if (maxim == 10) 
+%   disp('  Sucessful Frame Header Detection');
+% 
+%   % Presentation layer
+%   lengthMessagebin = num2str( rxStream(headStart+10:headStart+10+(24-1)) );
+%   lengthMessage    = bin2dec(lengthMessagebin(:)');
+%   %lengthMessage=44;
+%   disp(['  Message length: ' num2str(lengthMessage)] );
+% 
+%   rxMsg = rxStream(headStart+10+24:headStart+10+24+8*(lengthMessage)-1 );
+%   disp(['  Message: ' msg2text(rxMsg') ]); %ascii to text
+% else
+%    disp('  ERROR: Frame Header NOT Detected');  
+% end;
