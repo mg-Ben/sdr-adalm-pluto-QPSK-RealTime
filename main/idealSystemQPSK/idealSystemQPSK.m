@@ -38,6 +38,15 @@ tx.CenterFrequency = fc;
 tx.Gain = -10;
 tx.BasebandSampleRate = fs;
 
+rx=sdrrx('Pluto');
+rx.CenterFrequency = fc;
+rx.BasebandSampleRate = fs;
+rx.GainSource = 'Manual';
+rx.Gain = 0;
+
+%% Rx settings
+Ny=20000;
+
 %% Baseband Tx - mapping + shaping filter
 % frame
 load("others/resources/txStream.mat")           % Loading the bits
@@ -67,9 +76,16 @@ x = msI' + 1j*msQ';
 if length(x) < 5000
     x = [x; zeros(5000-length(x),1)];
 end
+
 transmitRepeat(tx,x);
 pause(Tt)
+
+% Receive signal:
+y=zeros(Ny,1);
+[y,valid,overflow]=rx();
+
 release(tx);
+release(rx);
 
 %% Comment out the next part of code:
 % xfI = msI;
