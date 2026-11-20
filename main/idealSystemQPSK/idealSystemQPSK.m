@@ -87,6 +87,27 @@ y=zeros(Ny,1);
 release(tx);
 release(rx);
 
+%% Code to run on console once we have captured the 20000 "y" buffer (i.e. after running this code, we must apply the following code to the y variable stored on Matlab Workspace:
+%1. Decide where to take the 5000 samples (x vector): y is a 20000 sized
+%vector. The transmitted vector is 5000 sized. Therefore, there are 4 x
+%vectors (or less) inside y. On the other hand, y is a vector of complex
+%values, where real part is msI repeated 4 times (or less) and imag part is
+%msQ repeated 4 times too (or less).
+%1.1. To decide where to take the 5000 samples, we can use either retrieved
+%msI or msQ: for example, we can use msI as figure; stem(real(y)) and
+%decide manually where the transmitted msI might have started. From that
+%index, we take exactly 5000 samples. We can run the following code:
+
+% starting_index = <TO-FILL>;
+% transmitted_size = 5000;
+% r2I = real(y(starting_index:starting_index+transmitted_size-1));
+% r2Q = imag(y(starting_index:starting_index+transmitted_size-1));
+% order=30; fbe = [0 0.25 0.3 1]; damps=[1 1 0 0]; b = firpm(order,fbe,damps); xfI = filter(b,1,r2I);
+% xfI = filter(b,1,r2I);
+% xfQ = filter(b,1,r2Q);
+% xfI = xfI/rms(xfI);
+% xfQ = xfQ/rms(xfQ);
+
 %% Comment out the next part of code:
 % xfI = msI;
 % xfQ = msQ;
