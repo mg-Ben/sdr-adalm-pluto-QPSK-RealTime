@@ -21,7 +21,7 @@ synchroHeader=repmat([1 1 0 0 1 0 0 1], 1, 65); %QPSK
 rng(0); disambiguationHeader = round(rand(1,50));  % Remove the synchronization phase ambiguity
 
 % Symbols
-M = 15;              % Samples per symbol=Oversamplig factor
+M = 9;              % Samples per symbol=Oversamplig factor
 
 % Modulation
 fs=10000; Ts =1/fs;            % Sampling frequency
