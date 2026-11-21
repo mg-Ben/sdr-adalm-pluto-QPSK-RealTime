@@ -17,7 +17,16 @@ clear; clf; clc;
 frameHeader     = [1 0 1 0 0 1 1 1 0 1];    % frame Sychronization (included in txStream file)
 %synchroHeader= zeros(1,500);               % Necessary for time synchronization
 %synchroHeader(1:2:end)=ones(1,250);        % BPSK 
-synchroHeader=repmat([1 1 0 0 1 0 0 1], 1, 65); %QPSK
+% synchroHeader=repmat([1 1 0 0 1 0 0 1], 1, 65); %QPSK
+
+synchroHeader_I_zeroMean = repmat([1 1 1 1 1 -1], 1, 17);
+synchroHeader_Q_zeroMean = [repmat([1 1 1 -1], 1, 24), 1, 1, 1, 1, 1, 1];
+synchroHeader_zeroMean = zeros(1, length(synchroHeader_I_zeroMean)+length(synchroHeader_Q_zeroMean));
+synchroHeader_zeroMean(1:2:end) = synchroHeader_I_zeroMean;
+synchroHeader_zeroMean(2:2:end) = synchroHeader_Q_zeroMean;
+synchroHeader_zeroMean = (synchroHeader_zeroMean+1)/2;
+synchroHeader = synchroHeader_zeroMean;
+
 rng(0); disambiguationHeader = round(rand(1,50));  % Remove the synchronization phase ambiguity
 
 % Symbols
@@ -55,7 +64,28 @@ txStream = [synchroHeader'; disambiguationHeader'; txStream; zeros(100,1)]; %zer
 % QPSK mapping
 %m = 2*txStream - 1;
 mI = 2*txStream(1:2:end)-1;
+% Choose synchroHeader so that mean is zero:
+% We can calculate the sum of [disambiguationHeader+txStream+zeros] as:
+start_index = (length([1 1 0 0 1 0 0 1])/2)*65+1;
+mI_sum_without_syncHeader = sum(mI(start_index:end));
+% The sum is -68. Therefore, we need to define a
+% header for mI such that that header sum is +68:
+% The synchronizationHeader of mI has length = 4, so we must decide a
+% 4-length vector with values 1 or -1 such that that vector repeated 65
+% times has a sum equal to +68. Consequently: the header sum multiplied by
+% 65 must be equal to 68. Then, the header sum must be 68/65 = 1.0462
+% The closest solution is a vector with sum = 1. For example: [1], [-1, 1,
+% 1] (in any order), [-1, -1, 1, 1, 1] (in any order)...
 mQ = 2*txStream(2:2:end)-1;
+% We do the same as mI for mQ:
+mQ_sum_without_syncHeader = sum(mQ(start_index:end));
+% The sum for the current values is -54.
+% We need a header such that the sum *65 is equal to +54.
+% The sum of a single header can be 0.8308 (1 is the closest value)
+
+% However, if we are able to modify the number of repetitions of
+% synchroHeader (65), we choose the header defined for exactly zero-mean (see above on input variables)
+
 NSymbols = length(mI);   %Number of Symbols
 
 
@@ -86,27 +116,6 @@ y=zeros(Ny,1);
 
 release(tx);
 release(rx);
-
-%% Code to run on console once we have captured the 20000 "y" buffer (i.e. after running this code, we must apply the following code to the y variable stored on Matlab Workspace:
-%1. Decide where to take the 5000 samples (x vector): y is a 20000 sized
-%vector. The transmitted vector is 5000 sized. Therefore, there are 4 x
-%vectors (or less) inside y. On the other hand, y is a vector of complex
-%values, where real part is msI repeated 4 times (or less) and imag part is
-%msQ repeated 4 times too (or less).
-%1.1. To decide where to take the 5000 samples, we can use either retrieved
-%msI or msQ: for example, we can use msI as figure; stem(real(y)) and
-%decide manually where the transmitted msI might have started. From that
-%index, we take exactly 5000 samples. We can run the following code:
-
-% starting_index = <TO-FILL>;
-% transmitted_size = 5000;
-% r2I = real(y(starting_index:starting_index+transmitted_size-1));
-% r2Q = imag(y(starting_index:starting_index+transmitted_size-1));
-% order=30; fbe = [0 0.25 0.3 1]; damps=[1 1 0 0]; b = firpm(order,fbe,damps); xfI = filter(b,1,r2I);
-% xfI = filter(b,1,r2I);
-% xfQ = filter(b,1,r2Q);
-% xfI = xfI/rms(xfI);
-% xfQ = xfQ/rms(xfQ);
 
 %% Comment out the next part of code:
 % xfI = msI;

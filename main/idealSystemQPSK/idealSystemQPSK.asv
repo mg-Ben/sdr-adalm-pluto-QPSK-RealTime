@@ -15,6 +15,8 @@ clear; clf; clc;
 %% Parameters
 %frame
 frameHeader     = [1 0 1 0 0 1 1 1 0 1];    % frame Sychronization (included in txStream file)
+frameHeader_I_zeroMean = repmat([1 1 1 1 1 -1], 1, 17);
+frameHeader_Q_zeroMean = repmat([])
 %synchroHeader= zeros(1,500);               % Necessary for time synchronization
 %synchroHeader(1:2:end)=ones(1,250);        % BPSK 
 synchroHeader=repmat([1 1 0 0 1 0 0 1], 1, 65); %QPSK
@@ -33,16 +35,16 @@ Tt=20;      % Transmission duration (s)
 SNR=30;               %dB
 
 %% ADALM-PLUTO initialization
-tx=sdrtx('Pluto');
-tx.CenterFrequency = fc;
-tx.Gain = -10;
-tx.BasebandSampleRate = fs;
-
-rx=sdrrx('Pluto');
-rx.CenterFrequency = fc;
-rx.BasebandSampleRate = fs;
-rx.GainSource = 'Manual';
-rx.Gain = 0;
+% tx=sdrtx('Pluto');
+% tx.CenterFrequency = fc;
+% tx.Gain = -10;
+% tx.BasebandSampleRate = fs;
+% 
+% rx=sdrrx('Pluto');
+% rx.CenterFrequency = fc;
+% rx.BasebandSampleRate = fs;
+% rx.GainSource = 'Manual';
+% rx.Gain = 0;
 
 %% Rx settings
 Ny=20000;
@@ -55,7 +57,33 @@ txStream = [synchroHeader'; disambiguationHeader'; txStream; zeros(100,1)]; %zer
 % QPSK mapping
 %m = 2*txStream - 1;
 mI = 2*txStream(1:2:end)-1;
+% Choose synchroHeader so that mean is zero:
+% We can calculate the sum of [disambiguationHeader+txStream+zeros] as:
+start_index = (length([1 1 0 0 1 0 0 1])/2)*65+1;
+mI_sum_without_syncHeader = sum(mI(start_index:end));
+% The sum for the current values is -68. Therefore, we need to define a
+% header for mI such that that header sum is +68:
+% The synchronizationHeader of mI has length = 4, so we must decide a
+% 4-length vector with values 1 or -1 such that that vector repeated 65
+% times has a sum equal to +68. Consequently: the header sum multiplied by
+% 65 must be equal to 68. Then, the header sum must be 68/65 = 1.0462
+% The closest solution is a vector with sum = 1. For example: [1], [-1, 1,
+% 1] (in any order), [-1, -1, 1, 1, 1] (in any order)...
 mQ = 2*txStream(2:2:end)-1;
+% We do the same as mI for mQ:
+mQ_sum_without_syncHeader = sum(mQ(start_index:end));
+% The sum for the current values is -54.
+% We need a header such that the sum *65 is equal to +54.
+% The sum of a single header can be 0.8308 (1 is the closest value)
+
+% However, if we are able to modify the number of repetitions of
+% synchroHeader (65), we can choose:
+% A header for mI such that the sum is 64, repeated 1 time
+% A header for mQ such that the sum is 54, repeated 1 time
+% It is advisable to generate a syncHeader with (1, -1) alternate pairs
+% For example:
+% mI_syncHeader = repmat([1, 1, 1, -1], 16);
+% mQ_syncHeader = 
 NSymbols = length(mI);   %Number of Symbols
 
 
@@ -86,15 +114,6 @@ y=zeros(Ny,1);
 
 release(tx);
 release(rx);
-
-%% Code to run on console once we have captured the 20000 "y" buffer (i.e. after running this code, we must apply the following code to the y variable stored on Matlab Workspace:
-%1. Decide where to take the 5000 samples (x vector): y is a 20000 sized
-%vector. The transmitted vector is 5000 sized. Therefore, there are 4 x
-%vectors (or less) inside y. On the other hand, y is a vector of complex
-%values, where real part is msI repeated 4 times (or less) and imag part is
-%msQ repeated 4 times too (or less).
-%1.1. To decide where to take the 5000 samples, we can use either retrieved
-%msI or msQ: for example, we can use msI as figure; stem(real(y)) 
 
 %% Comment out the next part of code:
 % xfI = msI;
