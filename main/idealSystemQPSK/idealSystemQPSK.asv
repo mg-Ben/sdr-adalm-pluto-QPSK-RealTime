@@ -15,11 +15,18 @@ clear; clf; clc;
 %% Parameters
 %frame
 frameHeader     = [1 0 1 0 0 1 1 1 0 1];    % frame Sychronization (included in txStream file)
-frameHeader_I_zeroMean = repmat([1 1 1 1 1 -1], 1, 17);
-frameHeader_Q_zeroMean = repmat([])
 %synchroHeader= zeros(1,500);               % Necessary for time synchronization
 %synchroHeader(1:2:end)=ones(1,250);        % BPSK 
-synchroHeader=repmat([1 1 0 0 1 0 0 1], 1, 65); %QPSK
+% synchroHeader=repmat([1 1 0 0 1 0 0 1], 1, 65); %QPSK
+
+synchroHeader_I_zeroMean = repmat([1 1 1 1 1 -1], 1, 17);
+synchroHeader_Q_zeroMean = [repmat([1 1 1 -1], 1, 24), 1, 1, 1, 1, 1, 1];
+synchroHeader_zeroMean = zeros(1, length(synchroHeader_I_zeroMean)+length(synchroHeader_Q_zeroMean));
+synchroHeader_zeroMean(1:2:end) = synchroHeader_I_zeroMean;
+synchroHeader_zeroMean(2:2:end) = synchroHeader_Q_zeroMean;
+synchroHeader_zeroMean = (synchroHeader_zeroMean+1)/2;
+synchroHeader = synchroHeader_zeroMean;
+
 rng(0); disambiguationHeader = round(rand(1,50));  % Remove the synchronization phase ambiguity
 
 % Symbols
@@ -57,35 +64,9 @@ txStream = [synchroHeader'; disambiguationHeader'; txStream; zeros(100,1)]; %zer
 % QPSK mapping
 %m = 2*txStream - 1;
 mI = 2*txStream(1:2:end)-1;
-% Choose synchroHeader so that mean is zero:
-% We can calculate the sum of [disambiguationHeader+txStream+zeros] as:
-start_index = (length([1 1 0 0 1 0 0 1])/2)*65+1;
-mI_sum_without_syncHeader = sum(mI(start_index:end));
-% The sum for the current values is -68. Therefore, we need to define a
-% header for mI such that that header sum is +68:
-% The synchronizationHeader of mI has length = 4, so we must decide a
-% 4-length vector with values 1 or -1 such that that vector repeated 65
-% times has a sum equal to +68. Consequently: the header sum multiplied by
-% 65 must be equal to 68. Then, the header sum must be 68/65 = 1.0462
-% The closest solution is a vector with sum = 1. For example: [1], [-1, 1,
-% 1] (in any order), [-1, -1, 1, 1, 1] (in any order)...
 mQ = 2*txStream(2:2:end)-1;
-% We do the same as mI for mQ:
-mQ_sum_without_syncHeader = sum(mQ(start_index:end));
-% The sum for the current values is -54.
-% We need a header such that the sum *65 is equal to +54.
-% The sum of a single header can be 0.8308 (1 is the closest value)
 
-% However, if we are able to modify the number of repetitions of
-% synchroHeader (65), we can choose:
-% A header for mI such that the sum is 64, repeated 1 time
-% A header for mQ such that the sum is 54, repeated 1 time
-% It is advisable to generate a syncHeader with (1, -1) alternate pairs
-% For example:
-% mI_syncHeader = repmat([1, 1, 1, -1], 16);
-% mQ_syncHeader = 
 NSymbols = length(mI);   %Number of Symbols
-
 
 %Shaping filtering - oversampling + pulse shaping
 % Oversampling by M
@@ -105,15 +86,28 @@ if length(x) < 5000
     x = [x; zeros(5000-length(x),1)];
 end
 
-transmitRepeat(tx,x);
-pause(Tt)
+% transmitRepeat(tx,x);
+% pause(Tt)
 
 % Receive signal:
 y=zeros(Ny,1);
-[y,valid,overflow]=rx();
+% [y,valid,overflow]=rx();
 
-release(tx);
-release(rx);
+% release(tx);
+% release(rx);
+
+%% Algorithm to detect the beginning of xfI and xfQ on received buffer y:
+% We compute the cross-correlation with synchroHeader:
+% To do so, we can take the synchroHeader part of transmitted signal as:
+processed_synchroHeader_msI = msI(1:(length(synchroHeader)/2) * M)';
+processed_synchroHeader_msQ = msQ(1:(length(synchroHeader)/2) * M)';
+processed_synchroHeader = processed_synchroHeader_msI + 1j*processed_synchroHeader_msQ;
+% Cross correlation with y:
+[correlation, lags] = abs(xcorr(y, processed_synchroHeader));
+[max_correlation, max_index] = max(correlation);
+starting_index = lags(max_index)+1;
+% We would take y from that index:
+y(starting_index:starting_index+);
 
 %% Comment out the next part of code:
 % xfI = msI;
