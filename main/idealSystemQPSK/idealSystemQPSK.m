@@ -87,7 +87,7 @@ y=zeros(Ny,1);
 release(tx);
 release(rx);
 
-%% Code to run on console once we have captured the 20000 "y" buffer (i.e. after running this code, we must apply the following code to the y variable stored on Matlab Workspace:
+%% Code to run on console once we have captured the 20000 "y" buffer (i.e. after running this code, we must apply the following code to the y variable stored on Matlab Workspace):
 %1. Decide where to take the 5000 samples (x vector): y is a 20000 sized
 %vector. The transmitted vector is 5000 sized. Therefore, there are 4 x
 %vectors (or less) inside y. On the other hand, y is a vector of complex
@@ -99,14 +99,16 @@ release(rx);
 %index, we take exactly 5000 samples. We can run the following code:
 
 % starting_index = <TO-FILL>;
-% transmitted_size = 5000;
-% r2I = real(y(starting_index:starting_index+transmitted_size-1));
-% r2Q = imag(y(starting_index:starting_index+transmitted_size-1));
+% transmitted_size = length(msI); % Here, we eliminate the added zeros that we added on tx side to fill 5000 samples
+% y_sample = y(starting_index:starting_index+transmitted_size-1);
+% r2I = real(y_sample(starting_index:starting_index+transmitted_size-1));
+% r2Q = imag(y_sample(starting_index:starting_index+transmitted_size-1));
 % order=30; fbe = [0 0.25 0.3 1]; damps=[1 1 0 0]; b = firpm(order,fbe,damps); xfI = filter(b,1,r2I);
 % xfI = filter(b,1,r2I);
 % xfQ = filter(b,1,r2Q);
-% xfI = xfI/rms(xfI);
-% xfQ = xfQ/rms(xfQ);
+% rms_value = rms(xfI + 1j*xfQ);
+% xfI = xfI/rms_value;
+% xfQ = xfQ/rms_value;
 
 %% Comment out the next part of code:
 % xfI = msI;
